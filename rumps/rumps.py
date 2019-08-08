@@ -1058,6 +1058,15 @@ class NSApp(NSObject):
 
     _ns_to_py_and_callback = {}
 
+    def userNotificationCenter_shouldPresentNotification_(self, notificationCenter, notification):
+        # We always want to show notifications, even if the rumps app is frontmost
+        return True
+
+    def userNotificationCenter_didDismissAlert_(self, notification_center, notification):
+        # This happens if the user clicks the 'Close' button or swipes it away
+        # In any case, handle the same as if they'd activated the alert
+        self.userNotificationCenter_didActivateNotification_(notification_center, notification)
+
     def userNotificationCenter_didActivateNotification_(self, notification_center, notification):
         notification_center.removeDeliveredNotification_(notification)
         data = notification.userInfo() or {}
