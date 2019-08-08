@@ -145,7 +145,7 @@ def _default_user_notification_center():
 
 
 def notification(title, subtitle, message, data=None, sound=True, action_button=None, other_button=None,
-                 has_reply_button=False, icon=None):
+                 has_reply_button=False, icon=None, placeholder=None):
     """Send a notification to Notification Center (OS X 10.8+). If running on a version of macOS that does not
     support notifications, a ``RuntimeError`` will be raised. Apple says,
 
@@ -198,6 +198,8 @@ def notification(title, subtitle, message, data=None, sound=True, action_button=
         notification.set_showsButtons_(True)
     if has_reply_button:
         notification.setHasReplyButton_(True)
+    if placeholder:
+        notification.setResponsePlaceholder_(placeholder)
 
     notification.setDeliveryDate_(NSDate.dateWithTimeInterval_sinceDate_(0, NSDate.date()))
     notification_center = _default_user_notification_center()
