@@ -179,12 +179,7 @@ def notification(title, subtitle, message, data=None, sound=True, action_button=
     notification.setInformativeText_(message)
 
     if data is not None:
-        app = getattr(App, '*app_instance')
-        dumped = app.serializer.dumps(data)
-        ns_dict = NSMutableDictionary.alloc().init()
-        ns_string = NSString.alloc().initWithString_(dumped)
-        ns_dict.setDictionary_({'value': ns_string})
-        notification.setUserInfo_(ns_dict)
+        notification.setUserInfo_(data)
 
     if icon is not None:
         notification.set_identityImage_(_nsimage_from_file(icon))
@@ -1065,13 +1060,7 @@ class NSApp(NSObject):
 
     def userNotificationCenter_didActivateNotification_(self, notification_center, notification):
         notification_center.removeDeliveredNotification_(notification)
-        ns_dict = notification.userInfo()
-        if ns_dict is None:
-            data = {}
-        else:
-            dumped = ns_dict['value']
-            app = getattr(App, '*app_instance')
-            data = app.serializer.loads(dumped)
+        data = notification.userInfo() or {}
 
         try:
             notification_function = getattr(notifications, '*notification_center')
