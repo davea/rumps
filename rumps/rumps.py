@@ -20,7 +20,7 @@ except ImportError:
 
 from Foundation import (NSDate, NSTimer, NSRunLoop, NSDefaultRunLoopMode, NSSearchPathForDirectoriesInDomains,
                         NSMakeRect, NSLog, NSObject, NSMutableDictionary, NSString)
-from AppKit import NSApplication, NSStatusBar, NSMenu, NSMenuItem, NSAlert, NSTextField, NSSecureTextField, NSImage, NSSlider, NSSize, NSWorkspace, NSWorkspaceWillSleepNotification, NSWorkspaceDidWakeNotification
+from AppKit import NSApplication, NSStatusBar, NSMenu, NSMenuItem, NSAlert, NSTextField, NSSecureTextField, NSPopUpButton, NSImage, NSSlider, NSSize, NSWorkspace, NSWorkspaceWillSleepNotification, NSWorkspaceDidWakeNotification, NSView
 from PyObjCTools import AppHelper
 
 import inspect
@@ -888,10 +888,11 @@ class Window(object):
     """
 
     def __init__(self, message='', title='', default_text='', ok=None, cancel=None, dimensions=(320, 160),
-                 secure=False):
+                 secure=False, options=None, options_empty=None):
         message = text_type(message)
         message = message.replace('%', '%%')
         title = text_type(title)
+        width, height = dimensions
 
         self._cancel = bool(cancel)
         self._icon = None
@@ -904,14 +905,26 @@ class Window(object):
             title, ok, cancel, None, message)
         self._alert.setAlertStyle_(0)  # informational style
 
+        if options:
+            self._menu = NSPopUpButton.alloc().initWithFrame_pullsDown_(NSMakeRect(0, height, width, height), False)
+            self._menu.setAutoenablesItems_(True)
+            if options_empty is not None:
+                self._menu.addItemWithTitle_(options_empty)
+            self._menu.addItemsWithTitles_(list(options))
+            self._containingView = NSView.alloc().initWithFrame_(NSMakeRect(0, 0, width, height*2))
+            self._containingView.addSubview_(self._menu)
+            self._alert.setAccessoryView_(self._containingView)
+
         if secure:
             self._textfield = NSSecureTextField.alloc().initWithFrame_(NSMakeRect(0, 0, *dimensions))
         else:
             self._textfield = NSTextField.alloc().initWithFrame_(NSMakeRect(0, 0, *dimensions))
         self._textfield.setSelectable_(True)
-        self._alert.setAccessoryView_(self._textfield)
-
         self.default_text = default_text
+        if options:
+            self._containingView.addSubview_(self._textfield)
+        else:
+            self._alert.setAccessoryView_(self._textfield)
 
     @property
     def title(self):
@@ -1012,19 +1025,24 @@ class Window(object):
         self._textfield.validateEditing()
         text = self._textfield.stringValue()
         self.default_text = self._default_text  # reset default text
-        return Response(clicked, text)
+        if self._menu:
+            option = self._menu.titleOfSelectedItem()
+            return Response(clicked, text, option)
+        else:
+            return Response(clicked, text)
 
 
 class Response(object):
     """Holds information from user interaction with a :class:`rumps.Window` after it has been closed."""
 
-    def __init__(self, clicked, text):
+    def __init__(self, clicked, text, option=None):
         self._clicked = clicked
         self._text = text
+        self._option = option
 
     def __repr__(self):
         shortened_text = self._text if len(self._text) < 21 else self._text[:17] + '...'
-        return '<{0}: [clicked: {1}, text: {2}]>'.format(type(self).__name__, self._clicked, repr(shortened_text))
+        return '<{0}: [clicked: {1}, text: {2}, option: {3}]>'.format(type(self).__name__, self._clicked, repr(shortened_text), self._option)
 
     @property
     def clicked(self):
@@ -1051,6 +1069,11 @@ class Response(object):
     def text(self):
         """Return the text collected from the user."""
         return self._text
+
+    @property
+    def option(self):
+        """Return the option collected from the user."""
+        return self._option
 
 
 class NSApp(NSObject):
